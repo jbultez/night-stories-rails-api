@@ -25,18 +25,24 @@ class Api::V1::AuthController < ApplicationController
 
   # POST /api/v1/auth/google
   def google
-    # Le token Google sera envoyé depuis React Native
     google_token = params[:google_token]
     
-    begin
-      # Vérifier le token Google (vous devrez implémenter cette méthode)
-      user_info = verify_google_token(google_token)
-      user = User.from_omniauth_info(user_info)
-      
-      render_auth_success(user)
-    rescue => e
-      render json: { error: e.message }, status: 401
+    if google_token.blank?
+      return render json: { error: 'Google token is required' }, status: 400
     end
+    
+    # Vérifier le token Google
+    google_payload = GoogleTokenVerifier.verify(google_token)
+    
+    if google_payload
+      user = User.from_google_token(google_payload)
+      render_auth_success(user)
+    else
+      render json: { error: 'Invalid Google token' }, status: 401
+    end
+  rescue => e
+    Rails.logger.error "Google auth error: #{e.message}"
+    render json: { error: 'Google authentication failed' }, status: 401
   end
 
   # POST /api/v1/auth/refresh
@@ -87,18 +93,7 @@ class Api::V1::AuthController < ApplicationController
   end
 
   def verify_google_token(token)
-    # Implémentation de la vérification du token Google
-    # Vous pouvez utiliser la gem 'google-id-token' ou faire un appel API
-    require 'net/http'
-    require 'json'
-    
-    uri = URI("https://oauth2.googleapis.com/tokeninfo?id_token=#{token}")
-    response = Net::HTTP.get_response(uri)
-    
-    if response.code == '200'
-      JSON.parse(response.body)
-    else
-      raise "Invalid token"
-    end
+    # Cette méthode est maintenant remplacée par GoogleTokenVerifier
+    GoogleTokenVerifier.verify(token)
   end
 end

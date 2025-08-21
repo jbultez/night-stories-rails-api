@@ -101,6 +101,8 @@ GEM
       net-http (>= 0.5.0)
     globalid (1.2.1)
       activesupport (>= 6.1)
+    google-id-token (1.4.2)
+      jwt (>= 1)
     hashie (5.0.0)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
@@ -255,6 +257,7 @@ DEPENDENCIES
   bootsnap
   debug
   devise
+  google-id-token
   jwt
   mysql2 (~> 0.5)
   omniauth

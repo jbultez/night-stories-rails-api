@@ -1,7 +1,6 @@
 class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
-         :recoverable, :rememberable, :validatable,
-         :omniauthable, omniauth_providers: [:google_oauth2]
+         :recoverable, :rememberable, :validatable
 
   has_many :refresh_tokens, dependent: :destroy
   has_one :active_refresh_token, -> { where(revoked: false) }, 
@@ -9,16 +8,33 @@ class User < ApplicationRecord
 
   validates :email, presence: true, uniqueness: true
 
-  # Pour l'authentification Google
-  def self.from_omniauth(auth)
-    where(email: auth.info.email).first_or_create do |user|
-      user.email = auth.info.email
-      user.password = Devise.friendly_token[0, 20]
-      user.name = auth.info.name
-      user.avatar_url = auth.info.image
-      user.provider = auth.provider
-      user.uid = auth.uid
+  # Méthode pour créer un utilisateur depuis Google
+  def self.from_google_token(google_payload)
+    email = google_payload['email']
+    
+    # Chercher ou créer l'utilisateur
+    user = find_or_initialize_by(email: email)
+    
+    if user.new_record?
+      user.assign_attributes(
+        name: google_payload['name'],
+        avatar_url: google_payload['picture'],
+        provider: 'google',
+        uid: google_payload['sub'],
+        password: Devise.friendly_token[0, 20] # Mot de passe aléatoire
+      )
+      user.save!
+    else
+      # Mettre à jour les infos Google si l'utilisateur existe déjà
+      user.update!(
+        name: google_payload['name'] || user.name,
+        avatar_url: google_payload['picture'] || user.avatar_url,
+        provider: 'google',
+        uid: google_payload['sub']
+      )
     end
+    
+    user
   end
 
   def create_refresh_token!(device_info = nil)
